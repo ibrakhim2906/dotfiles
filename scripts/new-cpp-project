@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: new-cpp-project <name>"
+  exit 1
+fi
+
+NAME="$1"
+DIR="$HOME/projects/$NAME"
+
+if [ -e "$DIR" ]; then
+  echo "Error: $DIR already exists"
+  exit 1
+fi
+
+mkdir -p "$DIR"/{src,tests}
+cd "$DIR"
+
+cat > CMakeLists.txt << EOF2
+cmake_minimum_required(VERSION 3.21)
+project(${NAME} CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_executable(app src/main.cpp)
+
+find_package(GTest CONFIG REQUIRED)
+enable_testing()
+add_executable(tests tests/test_main.cpp)
+target_link_libraries(tests PRIVATE GTest::gtest GTest::gtest_main)
+include(GoogleTest)
+gtest_discover_tests(tests)
+EOF2
+
+cat > CMakePresets.json << 'EOF2'
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "default",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -g"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "default", "configurePreset": "default" },
+    { "name": "debug", "configurePreset": "debug" }
+  ]
+}
+EOF2
+
+cat > .clangd << 'EOF2'
+CompileFlags:
+  CompilationDatabase: build
+Diagnostics:
+  ClangTidy:
+    Add: [performance-*, bugprone-*, modernize-*]
+EOF2
+
+cat > .gitignore << 'EOF2'
+build/
+build-debug/
+.cache/
+*.o
+*.out
+compile_commands.json
+EOF2
+
+cat > src/main.cpp << 'EOF2'
+int main() {
+    return 0;
+}
+EOF2
+
+cat > tests/test_main.cpp << 'EOF2'
+#include <gtest/gtest.h>
+
+TEST(Sanity, AlwaysPasses) {
+    EXPECT_EQ(1 + 1, 2);
+}
+EOF2
+
+[ -f "$HOME/.clang-format" ] && cp "$HOME/.clang-format" .
+
+git init -q
+git add -A
+git commit -q -m "scaffold: initial project structure"
+
+echo "Created $DIR"
+echo "Next:"
+echo "  cd $DIR"
+echo "  cmake --preset default"
+echo "  cmake --build build -j\$(nproc)"
+echo "  ctest --test-dir build --output-on-failure"
