@@ -1,0 +1,71 @@
+return {
+  { "folke/tokyonight.nvim",
+    lazy = false, priority = 1000,
+    config = function()
+      require("tokyonight").setup({ style = "night" })
+      vim.cmd.colorscheme("tokyonight-night")
+    end,
+  },
+
+  { "nvim-treesitter/nvim-treesitter",
+    branch = "master",
+    build = ":TSUpdate",
+    config = function()
+      require("nvim-treesitter.configs").setup({
+        ensure_installed = { "cpp", "c", "python", "lua", "cmake", "bash", "json" },
+        highlight = { enable = true },
+        indent = { enable = true },
+      })
+    end,
+  },
+
+  { "neovim/nvim-lspconfig" },
+  { "williamboman/mason.nvim", config = true },
+  { "williamboman/mason-lspconfig.nvim",
+    dependencies = { "mason.nvim", "nvim-lspconfig" },
+    config = function()
+      require("mason-lspconfig").setup({
+        ensure_installed = { "clangd", "basedpyright" },
+        automatic_enable = false,
+      })
+
+      local capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+      vim.lsp.config("clangd", {
+        capabilities = capabilities,
+        cmd = { "clangd", "--background-index" },
+      })
+
+      vim.lsp.config("basedpyright", {
+        capabilities = capabilities,
+      })
+
+      vim.lsp.enable({ "clangd", "basedpyright" })
+    end,
+  },
+
+  { "hrsh7th/nvim-cmp",
+    dependencies = { "hrsh7th/cmp-nvim-lsp", "hrsh7th/cmp-buffer", "hrsh7th/cmp-path" },
+    config = function()
+      local cmp = require("cmp")
+      cmp.setup({
+        mapping = cmp.mapping.preset.insert({
+          ["<CR>"] = cmp.mapping.confirm({ select = true }),
+          ["<Tab>"] = cmp.mapping.select_next_item(),
+          ["<S-Tab>"] = cmp.mapping.select_prev_item(),
+        }),
+        sources = { { name = "nvim_lsp" }, { name = "buffer" }, { name = "path" } },
+      })
+    end,
+  },
+
+  { "nvim-telescope/telescope.nvim", dependencies = { "nvim-lua/plenary.nvim" } },
+  { "lewis6991/gitsigns.nvim", config = true },
+  { "stevearc/oil.nvim", config = true },
+  { "nvim-lualine/lualine.nvim",
+    config = function()
+      require("lualine").setup({ options = { theme = "tokyonight" } })
+    end,
+  },
+  { "christoomey/vim-tmux-navigator" },
+}
