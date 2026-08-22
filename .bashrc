@@ -117,7 +117,6 @@ if ! shopt -oq posix; then
 fi
 alias fd=fdfind
 eval `keychain --eval --agents ssh id_ed25519 --quiet`
-eval "$(zoxide init bash)"
 
 eval "$(starship init bash)"
 
@@ -130,3 +129,4 @@ export PATH="$PATH:/opt/nvim/bin"
 export PATH="$PATH:$HOME/vcpkg"
 export PATH="$PATH:$HOME/scripts"
 alias dotfiles='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+eval "$(zoxide init bash)"
