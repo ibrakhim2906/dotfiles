@@ -19,7 +19,6 @@ o.scrolloff = 8
 o.clipboard = "unnamedplus"
 o.undofile = true
 
--- bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({
@@ -29,25 +28,15 @@ if not vim.loop.fs_stat(lazypath) then
   })
 end
 vim.opt.rtp:prepend(lazypath)
-
 require("lazy").setup("plugins")
 
--- core keymaps
+-- Neovim 0.11+ already provides: grn (rename), gra (code action),
+-- grr (references), gri (implementation), grt (type definition),
+-- K (hover), [d / ]d (diagnostic navigation) — no config needed.
+-- Only keeping what those defaults don't cover:
 local map = vim.keymap.set
-map("n", "<leader>e", "<cmd>Oil<cr>")
-map("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
-map("n", "<leader>fg", "<cmd>Telescope live_grep<cr>")
-map("n", "<leader>fb", "<cmd>Telescope buffers<cr>")
-
--- LSP keymaps, set only in buffers that have an LSP attached
-vim.api.nvim_create_autocmd("LspAttach", {
-  callback = function(args)
-    local buf = args.buf
-    local opts = { buffer = buf }
-    map("n", "gd", vim.lsp.buf.definition, opts)
-    map("n", "gr", vim.lsp.buf.references, opts)
-    map("n", "K", vim.lsp.buf.hover, opts)
-    map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
-    map("n", "<leader>rn", vim.lsp.buf.rename, opts)
-  end,
-})
+map("n", "<leader>e", "<cmd>Oil<cr>", { desc = "Open file explorer (Oil)" })
+map("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Find files" })
+map("n", "<leader>fg", "<cmd>Telescope live_grep<cr>", { desc = "Grep in project" })
+map("n", "<leader>fb", "<cmd>Telescope buffers<cr>", { desc = "List open buffers" })
+map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
