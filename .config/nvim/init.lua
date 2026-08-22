@@ -40,3 +40,5 @@ map("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Find files" })
 map("n", "<leader>fg", "<cmd>Telescope live_grep<cr>", { desc = "Grep in project" })
 map("n", "<leader>fb", "<cmd>Telescope buffers<cr>", { desc = "List open buffers" })
 map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+vim.opt.ttimeoutlen = 10
+vim.o.timeoutlen = 300

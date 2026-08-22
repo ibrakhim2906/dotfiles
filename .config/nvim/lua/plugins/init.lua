@@ -6,7 +6,6 @@ return {
       vim.cmd.colorscheme("tokyonight-night")
     end,
   },
-
   { "nvim-treesitter/nvim-treesitter",
     branch = "master",
     build = ":TSUpdate",
@@ -14,43 +13,27 @@ return {
       require("nvim-treesitter.configs").setup({
         ensure_installed = { "cpp", "c", "python", "lua", "cmake", "bash", "json" },
         highlight = { enable = true },
-        indent = { enable = true },
+        indent = { enable = true, disable = { "cpp", "c" } },
       })
     end,
   },
-
-  { "neovim/nvim-lspconfig" },
   { "williamboman/mason.nvim", config = true },
   { "williamboman/mason-lspconfig.nvim",
-    dependencies = { "mason.nvim", "nvim-lspconfig" },
+    dependencies = { "mason.nvim", "neovim/nvim-lspconfig" },
     config = function()
       require("mason-lspconfig").setup({
         ensure_installed = { "clangd", "basedpyright" },
-        automatic_enable = false,
       })
-
-      local capabilities = require("cmp_nvim_lsp").default_capabilities()
-
-      vim.lsp.config("clangd", {
-        capabilities = capabilities,
-        cmd = { "clangd", "--background-index" },
-      })
-
-      vim.lsp.config("basedpyright", {
-        capabilities = capabilities,
-      })
-
-      vim.lsp.enable({ "clangd", "basedpyright" })
     end,
   },
-
   { "hrsh7th/nvim-cmp",
     dependencies = { "hrsh7th/cmp-nvim-lsp", "hrsh7th/cmp-buffer", "hrsh7th/cmp-path" },
     config = function()
       local cmp = require("cmp")
       cmp.setup({
+        completion = { keyword_length = 2 },
         mapping = cmp.mapping.preset.insert({
-          ["<CR>"] = cmp.mapping.confirm({ select = true }),
+          ["<CR>"] = cmp.mapping.confirm({ select = false }),
           ["<Tab>"] = cmp.mapping.select_next_item(),
           ["<S-Tab>"] = cmp.mapping.select_prev_item(),
         }),
@@ -58,7 +41,6 @@ return {
       })
     end,
   },
-
   { "nvim-telescope/telescope.nvim", dependencies = { "nvim-lua/plenary.nvim" } },
   { "lewis6991/gitsigns.nvim", config = true },
   { "stevearc/oil.nvim", config = true },
