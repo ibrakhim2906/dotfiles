@@ -42,3 +42,4 @@ map("n", "<leader>fb", "<cmd>Telescope buffers<cr>", { desc = "List open buffers
 map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
 vim.opt.ttimeoutlen = 10
 vim.o.timeoutlen = 300
+vim.opt.pumheight = 10
