@@ -43,3 +43,4 @@ map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
 vim.opt.ttimeoutlen = 10
 vim.o.timeoutlen = 300
 vim.opt.pumheight = 10
+vim.opt.cursorline = true
