@@ -44,3 +44,4 @@ vim.opt.ttimeoutlen = 10
 vim.o.timeoutlen = 300
 vim.opt.pumheight = 10
 vim.opt.cursorline = true
+vim.diagnostic.config({ virtual_lines = true })
