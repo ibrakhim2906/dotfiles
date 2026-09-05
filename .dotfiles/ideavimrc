@@ -1,0 +1,53 @@
+set scrolloff=8
+set incsearch
+set hlsearch
+set ignorecase smartcase
+set clipboard+=unnamedplus
+set notimeout
+set ideajoin
+
+let mapleader = " "
+
+Plug 'easymotion/vim-easymotion'
+set easymotion
+set surround
+set commentary
+set highlightedyank
+
+""" Key ownership — lives in dotfiles, unlike the GUI table
+sethandler <C-N> a:ide
+sethandler <C-P> a:ide
+sethandler <C-W> a:ide
+sethandler <C-E> a:ide
+sethandler <C-O> a:vim
+sethandler <C-I> a:vim
+sethandler <C-D> a:vim
+sethandler <C-U> a:vim
+sethandler <C-A> a:vim
+
+nmap <leader>e <Action>(ActivateProjectToolWindow)
+nmap <leader>f <Action>(GotoFile)
+nmap <leader>s <Action>(GotoSymbol)
+nmap <leader>a <Action>(GotoAction)
+nmap <leader>u <Action>(FindUsages)
+nmap gi <Action>(GotoImplementation)
+nmap gt <Action>(GotoTest)
+
+nmap <leader>rn <Action>(RenameElement)
+nmap <leader>rm <Action>(ExtractMethod)
+nmap <leader>. <Action>(ShowIntentionActions)
+nmap <leader>o <Action>(OptimizeImports)
+nmap <leader>= <Action>(ReformatCode)
+
+nmap <leader>rr <Action>(Run)
+nmap <leader>rd <Action>(Debug)
+nmap <leader>rc <Action>(ChooseRunConfiguration)
+nmap <leader>b <Action>(ToggleLineBreakpoint)
+
+nmap ]d <Action>(GotoNextError)
+nmap [d <Action>(GotoPreviousError)
+nmap <S-h> <Action>(PreviousTab)
+nmap <S-l> <Action>(NextTab)
+nmap <leader>q <Action>(CloseContent)
+
+nnoremap <leader><CR> :nohlsearch<CR>
