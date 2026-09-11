@@ -44,4 +44,5 @@ vim.opt.ttimeoutlen = 10
 vim.o.timeoutlen = 300
 vim.opt.pumheight = 10
 vim.opt.cursorline = true
-vim.diagnostic.config({ virtual_lines = true })
+vim.diagnostic.config({ virtual_text = true, virtual_lines = { current_line = true } })
+vim.opt.showmode = false  -- lualine already shows the mode

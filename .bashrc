@@ -10,6 +10,7 @@ HISTFILESIZE=200000
 alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
+export BAT_THEME=ansi
 alias cat='batcat --paging=never'
 alias ls='eza --icons'
 alias ll='eza -la --icons --git'
