@@ -3,7 +3,7 @@ return {
   event = { "BufWritePre" },
   cmd = { "ConformInfo" },
   keys = {
-    { "<leader>cf", function() require("conform").format({ lsp_fallback = true }) end, desc = "Format buffer" },
+    { "<leader>cf", function() require("conform").format({ lsp_format = "fallback" }) end, desc = "Format buffer" },
   },
   opts = {
     formatters_by_ft = {
@@ -11,6 +11,6 @@ return {
       c = { "clang_format" },
       python = { "ruff_format" },
     },
-    format_on_save = { timeout_ms = 500, lsp_fallback = true },
+    format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
   },
 }

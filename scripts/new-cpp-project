@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-if [ -z "$1" ]; then
+if [ -z "${1:-}" ]; then
   echo "Usage: new-cpp-project <name>"
   exit 1
 fi
 
 NAME="$1"
 DIR="$HOME/projects/$NAME"
+PKG=$(echo "$NAME" | tr '[:upper:]_' '[:lower:]-')
 
 if [ -e "$DIR" ]; then
   echo "Error: $DIR already exists"
@@ -34,6 +35,19 @@ include(GoogleTest)
 gtest_discover_tests(tests)
 EOF2
 
+BASELINE=""
+if git -C "$HOME/vcpkg" rev-parse HEAD >/dev/null 2>&1; then
+  BASELINE=",
+  \"builtin-baseline\": \"$(git -C "$HOME/vcpkg" rev-parse HEAD)\""
+fi
+cat > vcpkg.json << EOF2
+{
+  "name": "${PKG}",
+  "version": "0.1.0",
+  "dependencies": ["gtest"]${BASELINE}
+}
+EOF2
+
 cat > CMakePresets.json << 'EOF2'
 {
   "version": 3,
@@ -43,6 +57,7 @@ cat > CMakePresets.json << 'EOF2'
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_TOOLCHAIN_FILE": "$env{HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
@@ -75,6 +90,7 @@ EOF2
 cat > .gitignore << 'EOF2'
 build/
 build-debug/
+vcpkg_installed/
 .cache/
 *.o
 *.out

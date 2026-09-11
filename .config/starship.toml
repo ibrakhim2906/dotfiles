@@ -1,4 +1,4 @@
-format = """$directory$git_branch
+format = """$directory$git_branch$git_status
 $character"""
 
 [directory]
