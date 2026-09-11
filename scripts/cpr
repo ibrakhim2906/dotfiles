@@ -1,2 +1,9 @@
 #!/usr/bin/env bash
-g++ -O2 -Wall -std=c++20 -I ~/cp/pch -o "/tmp/$1" "$1.cpp" && "/tmp/$1" < "$1.in"
+# cpr <name|name.cpp> [--fast]   compile + run with <name>.in as stdin
+set -euo pipefail
+[ -z "${1:-}" ] && { echo "usage: cpr <name> [--fast]"; exit 1; }
+n="${1%.cpp}"
+flags="-g -fsanitize=address,undefined -DLOCAL"
+[ "${2:-}" = "--fast" ] && flags="-O2"
+g++ -std=c++20 -Wall -Wextra -Wshadow $flags -I "$HOME/cp/pch" -o "/tmp/$n" "$n.cpp"
+if [ -f "$n.in" ]; then "/tmp/$n" < "$n.in"; else "/tmp/$n"; fi
