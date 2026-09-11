@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+g++ -O2 -Wall -std=c++20 -I ~/cp/pch -o "/tmp/$1" "$1.cpp" && "/tmp/$1" < "$1.in"
