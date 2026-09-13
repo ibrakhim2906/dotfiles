@@ -15,24 +15,36 @@ if [ -e "$DIR" ]; then
   exit 1
 fi
 
-mkdir -p "$DIR"/{src,tests}
+mkdir -p "$DIR"/{src,tests,bench,include/"$PKG"}
 cd "$DIR"
 
 cat > CMakeLists.txt << EOF2
 cmake_minimum_required(VERSION 3.21)
 project(${NAME} CXX)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-add_executable(app src/main.cpp)
-
-find_package(GTest CONFIG REQUIRED)
 enable_testing()
+
+# ---- core library: all real code lives here so tests and benches can link it
+add_library(${PKG}_core STATIC src/placeholder.cpp)
+target_include_directories(${PKG}_core PUBLIC include)
+target_compile_features(${PKG}_core PUBLIC cxx_std_20)
+target_compile_options(${PKG}_core PUBLIC -Wall -Wextra -Wpedantic -Werror)
+
+# ---- driver
+add_executable(app src/main.cpp)
+target_link_libraries(app PRIVATE ${PKG}_core)
+
+# ---- tests
+find_package(GTest CONFIG REQUIRED)
 add_executable(tests tests/test_main.cpp)
-target_link_libraries(tests PRIVATE GTest::gtest GTest::gtest_main)
+target_link_libraries(tests PRIVATE ${PKG}_core GTest::gtest GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(tests)
+
+# ---- benchmarks
+find_package(benchmark CONFIG REQUIRED)
+add_executable(bench bench/bench_main.cpp)
+target_link_libraries(bench PRIVATE ${PKG}_core benchmark::benchmark)
 EOF2
 
 BASELINE=""
@@ -44,7 +56,7 @@ cat > vcpkg.json << EOF2
 {
   "name": "${PKG}",
   "version": "0.1.0",
-  "dependencies": ["gtest"]${BASELINE}
+  "dependencies": ["gtest", "benchmark"]${BASELINE}
 }
 EOF2
 
@@ -53,62 +65,144 @@ cat > CMakePresets.json << 'EOF2'
   "version": 3,
   "configurePresets": [
     {
-      "name": "default",
+      "name": "base",
+      "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_TOOLCHAIN_FILE": "$env{HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
-      "name": "debug",
-      "inherits": "default",
-      "binaryDir": "${sourceDir}/build-debug",
+      "name": "release",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_FLAGS": "-O3 -march=native -g"
+      }
+    },
+    {
+      "name": "asan",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build-asan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -g"
+        "CMAKE_CXX_FLAGS": "-O0 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    },
+    {
+      "name": "tsan",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build-tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-O1 -g -fsanitize=thread -fno-sanitize-recover=all -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
       }
     }
   ],
   "buildPresets": [
-    { "name": "default", "configurePreset": "default" },
-    { "name": "debug", "configurePreset": "debug" }
+    { "name": "release", "configurePreset": "release" },
+    { "name": "asan",    "configurePreset": "asan" },
+    { "name": "tsan",    "configurePreset": "tsan" }
   ]
 }
 EOF2
 
+cat > run.sh << 'EOF2'
+#!/usr/bin/env bash
+# run.sh [test|bench|all]   default: test
+set -euo pipefail
+cd "$(dirname "$0")"
+JOBS=$(nproc)
+
+case "${1:-test}" in
+  test)
+    cmake --preset asan
+    cmake --build build-asan -j"$JOBS"
+    ctest --test-dir build-asan --output-on-failure
+    ;;
+  tsan)
+    cmake --preset tsan
+    cmake --build build-tsan -j"$JOBS"
+    ctest --test-dir build-tsan --output-on-failure
+    ;;
+  bench)
+    cmake --preset release
+    cmake --build build-release -j"$JOBS"
+    # pin to an isolated core; never benchmark from inside the IDE
+    taskset -c 2 ./build-release/bench
+    ;;
+  all)
+    "$0" test && "$0" bench
+    ;;
+  *)
+    echo "usage: run.sh [test|tsan|bench|all]"; exit 1
+    ;;
+esac
+EOF2
+chmod +x run.sh
+
 cat > .clangd << 'EOF2'
 CompileFlags:
-  CompilationDatabase: build
-Diagnostics:
-  ClangTidy:
-    Add: [performance-*, bugprone-*, modernize-*]
+  CompilationDatabase: build-asan
+EOF2
+
+cat > .clang-tidy << 'EOF2'
+Checks: >
+  -*,
+  performance-*,
+  bugprone-*,
+  modernize-*,
+  readability-identifier-naming
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
 EOF2
 
 cat > .gitignore << 'EOF2'
-build/
-build-debug/
+build-release/
+build-asan/
+build-tsan/
+cmake-build-*/
 vcpkg_installed/
 .cache/
+.idea/
+compile_commands.json
+data/
 *.o
 *.out
-compile_commands.json
+EOF2
+
+cat > src/placeholder.cpp << 'EOF2'
+// Replace me: first real translation unit of the core library.
+namespace {
+int keep_the_library_non_empty() { return 0; }
+}  // namespace
 EOF2
 
 cat > src/main.cpp << 'EOF2'
-int main() {
-    return 0;
-}
+int main() { return 0; }
 EOF2
 
 cat > tests/test_main.cpp << 'EOF2'
 #include <gtest/gtest.h>
 
-TEST(Sanity, AlwaysPasses) {
-    EXPECT_EQ(1 + 1, 2);
+TEST(Sanity, AlwaysPasses) { EXPECT_EQ(1 + 1, 2); }
+EOF2
+
+cat > bench/bench_main.cpp << 'EOF2'
+#include <benchmark/benchmark.h>
+
+static void BM_Nothing(benchmark::State& state) {
+    for (auto _ : state) {
+        benchmark::DoNotOptimize(0);
+    }
 }
+BENCHMARK(BM_Nothing);
+
+BENCHMARK_MAIN();
 EOF2
 
 [ -f "$HOME/.clang-format" ] && cp "$HOME/.clang-format" .
@@ -118,8 +212,10 @@ git add -A
 git commit -q -m "scaffold: initial project structure"
 
 echo "Created $DIR"
+echo
 echo "Next:"
 echo "  cd $DIR"
-echo "  cmake --preset default"
-echo "  cmake --build build -j\$(nproc)"
-echo "  ctest --test-dir build --output-on-failure"
+echo "  ./run.sh test      # asan build + ctest"
+echo "  ./run.sh bench     # release build, pinned"
+echo
+echo "Phase 0 gate: verify the sanitizers actually fire before writing real code."
