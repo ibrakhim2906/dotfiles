@@ -7,13 +7,17 @@ return {
     end,
   },
   { "nvim-treesitter/nvim-treesitter",
-    branch = "master",
+    branch = "main",
+    lazy = false,
     build = ":TSUpdate",
     config = function()
-      require("nvim-treesitter.configs").setup({
-        ensure_installed = { "cpp", "c", "python", "lua", "cmake", "bash", "json" },
-        highlight = { enable = true },
-        indent = { enable = true, disable = { "cpp", "c" } },
+      local langs = { "cpp", "c", "python", "lua", "cmake", "bash", "json" }
+      require("nvim-treesitter").setup()
+      require("nvim-treesitter").install(langs)
+      -- highlight = { enable = true } is gone; Neovim starts it per buffer now
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = langs,
+        callback = function() pcall(vim.treesitter.start) end,
       })
     end,
   },

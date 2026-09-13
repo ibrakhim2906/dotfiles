@@ -62,7 +62,8 @@ EOF2
 
 cat > CMakePresets.json << 'EOF2'
 {
-  "version": 3,
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
   "configurePresets": [
     {
       "name": "base",
@@ -70,30 +71,35 @@ cat > CMakePresets.json << 'EOF2'
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_COMPILER": "/usr/bin/g++-13",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
       }
     },
     {
-      "name": "release",
+      "name": "dev",
+      "displayName": "dev (debug, no sanitizers)",
       "inherits": "base",
-      "binaryDir": "${sourceDir}/build-release",
+      "binaryDir": "${sourceDir}/build-dev",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_CXX_FLAGS": "-O3 -march=native -g"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-O0 -g3 -fno-omit-frame-pointer"
       }
     },
     {
       "name": "asan",
+      "displayName": "asan + ubsan",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build-asan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-O0 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS": "-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
       }
     },
     {
       "name": "tsan",
+      "displayName": "tsan",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build-tsan",
       "cacheVariables": {
@@ -101,12 +107,17 @@ cat > CMakePresets.json << 'EOF2'
         "CMAKE_CXX_FLAGS": "-O1 -g -fsanitize=thread -fno-sanitize-recover=all -fno-omit-frame-pointer",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
       }
+    },
+    {
+      "name": "release",
+      "displayName": "release (benchmarks)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_FLAGS": "-O3 -march=native -g"
+      }
     }
-  ],
-  "buildPresets": [
-    { "name": "release", "configurePreset": "release" },
-    { "name": "asan",    "configurePreset": "asan" },
-    { "name": "tsan",    "configurePreset": "tsan" }
   ]
 }
 EOF2
@@ -119,6 +130,11 @@ cd "$(dirname "$0")"
 JOBS=$(nproc)
 
 case "${1:-test}" in
+  dev)
+    cmake --preset dev
+    cmake --build build-dev -j"$JOBS"
+    ctest --test-dir build-dev --output-on-failure
+    ;;
   test)
     cmake --preset asan
     cmake --build build-asan -j"$JOBS"
@@ -139,7 +155,7 @@ case "${1:-test}" in
     "$0" test && "$0" bench
     ;;
   *)
-    echo "usage: run.sh [test|tsan|bench|all]"; exit 1
+    echo "usage: run.sh [dev|test|tsan|bench|all]"; exit 1
     ;;
 esac
 EOF2
@@ -147,7 +163,7 @@ chmod +x run.sh
 
 cat > .clangd << 'EOF2'
 CompileFlags:
-  CompilationDatabase: build-asan
+  CompilationDatabase: build-dev
 EOF2
 
 cat > .clang-tidy << 'EOF2'
@@ -156,12 +172,15 @@ Checks: >
   performance-*,
   bugprone-*,
   modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
   readability-identifier-naming
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'
 EOF2
 
 cat > .gitignore << 'EOF2'
+build-dev/
 build-release/
 build-asan/
 build-tsan/
@@ -175,11 +194,11 @@ data/
 *.out
 EOF2
 
-cat > src/placeholder.cpp << 'EOF2'
+cat > src/placeholder.cpp << EOF2
 // Replace me: first real translation unit of the core library.
-namespace {
+namespace ${PKG//-/_} {
 int keep_the_library_non_empty() { return 0; }
-}  // namespace
+}  // namespace ${PKG//-/_}
 EOF2
 
 cat > src/main.cpp << 'EOF2'
@@ -215,6 +234,7 @@ echo "Created $DIR"
 echo
 echo "Next:"
 echo "  cd $DIR"
+echo "  ./run.sh dev       # fast debug build + ctest"
 echo "  ./run.sh test      # asan build + ctest"
 echo "  ./run.sh bench     # release build, pinned"
 echo
