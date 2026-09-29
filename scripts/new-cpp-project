@@ -24,6 +24,9 @@ project(${NAME} CXX)
 
 enable_testing()
 
+string(TOUPPER "\${CMAKE_BUILD_TYPE}" _bt)
+message(STATUS "CXX flags: \${CMAKE_CXX_FLAGS} \${CMAKE_CXX_FLAGS_\${_bt}}")
+
 # ---- core library: all real code lives here so tests and benches can link it
 add_library(${PKG}_core STATIC src/placeholder.cpp)
 target_include_directories(${PKG}_core PUBLIC include)
@@ -83,7 +86,7 @@ cat > CMakePresets.json << 'EOF2'
       "binaryDir": "${sourceDir}/build-dev",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-O0 -g3 -fno-omit-frame-pointer"
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g3 -fno-omit-frame-pointer"
       }
     },
     {
@@ -93,7 +96,7 @@ cat > CMakePresets.json << 'EOF2'
       "binaryDir": "${sourceDir}/build-asan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
       }
     },
@@ -104,7 +107,7 @@ cat > CMakePresets.json << 'EOF2'
       "binaryDir": "${sourceDir}/build-tsan",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-O1 -g -fsanitize=thread -fno-sanitize-recover=all -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O1 -g -fsanitize=thread -fno-sanitize-recover=all -fno-omit-frame-pointer",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
       }
     },
@@ -115,7 +118,7 @@ cat > CMakePresets.json << 'EOF2'
       "binaryDir": "${sourceDir}/build-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_CXX_FLAGS": "-O3 -march=native -g"
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -march=native -g -DNDEBUG"
       }
     }
   ]

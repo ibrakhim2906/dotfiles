@@ -1,11 +1,4 @@
 return {
-  { "folke/tokyonight.nvim",
-    lazy = false, priority = 1000,
-    config = function()
-      require("tokyonight").setup({ style = "night" })
-      vim.cmd.colorscheme("tokyonight-night")
-    end,
-  },
   { "nvim-treesitter/nvim-treesitter",
     branch = "main",
     lazy = false,
@@ -55,7 +48,7 @@ return {
   { "nvim-lualine/lualine.nvim",
     config = function()
       require("lualine").setup({
-        options = { theme = "tokyonight", section_separators = "", component_separators = "", globalstatus = true },
+        options = { theme = "auto", section_separators = "", component_separators = "", globalstatus = true },
         sections = {
           lualine_a = { "mode" },
           lualine_b = { "branch", "diff", "diagnostics" },
