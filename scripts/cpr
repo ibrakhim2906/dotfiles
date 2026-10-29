@@ -3,7 +3,9 @@
 set -euo pipefail
 [ -z "${1:-}" ] && { echo "usage: cpr <name> [--fast]"; exit 1; }
 n="${1%.cpp}"
-flags="-g -fsanitize=address,undefined -DLOCAL"
-[ "${2:-}" = "--fast" ] && flags="-O2"
-g++ -std=c++20 -Wall -Wextra -Wshadow $flags -I "$HOME/cp/pch" -o "/tmp/$n" "$n.cpp"
-if [ -f "$n.in" ]; then "/tmp/$n" < "$n.in"; else "/tmp/$n"; fi
+flags=(-g -fsanitize=address,undefined -DLOCAL)
+[ "${2:-}" = "--fast" ] && flags=(-O2)
+build_dir="$(mktemp -d)"
+trap 'rm -rf -- "$build_dir"' EXIT
+g++ -std=c++20 -Wall -Wextra -Wshadow "${flags[@]}" -I "$HOME/cp/pch" -o "$build_dir/program" "$n.cpp"
+if [ -f "$n.in" ]; then "$build_dir/program" < "$n.in"; else "$build_dir/program"; fi

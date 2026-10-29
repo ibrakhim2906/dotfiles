@@ -1,17 +1,30 @@
-format = """$directory$git_branch$git_status
+add_newline = false
+format = """[ibrakhim@pc:](#4FC1FF)$directory$git_branch${custom.git_dirty}
 $character"""
 
 [directory]
-style = "bold #7aa2f7"
-truncation_length = 3
+format = '[$path]($style)'
+style = '#569CD6'
+truncation_length = 0
+truncate_to_repo = false
+home_symbol = '~'
 
 [git_branch]
-style = "#bb9af7"
-symbol = " "
+format = ' [$branch]($style)'
+style = '#C586C0'
+symbol = ''
 
-[git_status]
-style = "#f7768e"
+[custom.git_dirty]
+description = 'One marker for any uncommitted changes'
+require_repo = true
+when = 'test -n "$(git status --porcelain --untracked-files=normal 2>/dev/null)"'
+command = "printf '*'"
+shell = ['sh']
+format = ' [$output]($style)'
+style = '#D7BA7D'
 
 [character]
-success_symbol = "[❯](#9ece6a)"
-error_symbol = "[❯](#f7768e)"
+format = '$symbol '
+success_symbol = '[\$](#4EC9B0)'
+error_symbol = '[\$](#F44747)'
+vimcmd_symbol = '[\$](#4EC9B0)'

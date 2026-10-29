@@ -1,14 +1,48 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
-if [ -z "${1:-}" ]; then
+if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+  echo "Usage: new-cpp-project <name>"
+  echo "Creates and configures a C++20/CMake project in ~/projects/<name>."
+  exit 0
+fi
+if [ "$#" -ne 1 ]; then
   echo "Usage: new-cpp-project <name>"
   exit 1
 fi
 
 NAME="$1"
+if ! [[ "$NAME" =~ ^[A-Za-z][A-Za-z0-9]*([_-][A-Za-z0-9]+)*$ ]]; then
+  echo "Error: use a letter first, then letters/digits separated by single _ or - characters."
+  exit 1
+fi
+
 DIR="$HOME/projects/$NAME"
 PKG=$(echo "$NAME" | tr '[:upper:]_' '[:lower:]-')
+case "$PKG" in
+  core|default|prn|aux|nul|con|com[0-9]|lpt[0-9])
+    echo "Error: '$NAME' is a reserved package name. Choose another name."
+    exit 1
+    ;;
+esac
+# A prefix also makes C++ keyword names such as 'class' safe.
+PKG_NS="project_${PKG//-/_}"
+
+export VCPKG_ROOT="${VCPKG_ROOT:-$HOME/vcpkg}"
+if [ ! -x "$VCPKG_ROOT/vcpkg" ]; then
+  echo "Error: vcpkg not found at $VCPKG_ROOT"
+  echo "  git clone https://github.com/microsoft/vcpkg.git ~/vcpkg && ~/vcpkg/bootstrap-vcpkg.sh"
+  exit 1
+fi
+for tool in cmake ninja git g++; do
+  command -v "$tool" >/dev/null || { echo "Error: $tool is not installed"; exit 1; }
+done
+CMAKE_VER=$(cmake --version | head -n1 | awk '{print $3}')
+if [ "$(printf '%s\n3.25\n' "$CMAKE_VER" | sort -V | head -n1)" != "3.25" ]; then
+  echo "Error: CMake $CMAKE_VER found; CMake >= 3.25 is required."
+  exit 1
+fi
 
 if [ -e "$DIR" ]; then
   echo "Error: $DIR already exists"
@@ -18,11 +52,30 @@ fi
 mkdir -p "$DIR"/{src,tests,bench,include/"$PKG"}
 cd "$DIR"
 
-cat > CMakeLists.txt << EOF2
-cmake_minimum_required(VERSION 3.21)
+# =============================================================== CMakeLists
+cat > CMakeLists.txt << EOF_CMAKE
+cmake_minimum_required(VERSION 3.25)
+# Resolve vcpkg before project() enables the compiler. Works in IDEs as well
+# as terminals, with VCPKG_ROOT as an optional override.
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  if(DEFINED ENV{VCPKG_ROOT} AND NOT "\$ENV{VCPKG_ROOT}" STREQUAL "")
+    set(_vcpkg_root "\$ENV{VCPKG_ROOT}")
+  else()
+    set(_vcpkg_root "\$ENV{HOME}/vcpkg")
+  endif()
+  set(CMAKE_TOOLCHAIN_FILE "\${_vcpkg_root}/scripts/buildsystems/vcpkg.cmake"
+      CACHE FILEPATH "vcpkg toolchain")
+endif()
+
 project(${NAME} CXX)
 
 enable_testing()
+
+# Use ccache automatically if it is installed (no machine paths in presets).
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
+  set(CMAKE_CXX_COMPILER_LAUNCHER "\${CCACHE_PROGRAM}")
+endif()
 
 string(TOUPPER "\${CMAKE_BUILD_TYPE}" _bt)
 message(STATUS "CXX flags: \${CMAKE_CXX_FLAGS} \${CMAKE_CXX_FLAGS_\${_bt}}")
@@ -31,7 +84,18 @@ message(STATUS "CXX flags: \${CMAKE_CXX_FLAGS} \${CMAKE_CXX_FLAGS_\${_bt}}")
 add_library(${PKG}_core STATIC src/placeholder.cpp)
 target_include_directories(${PKG}_core PUBLIC include)
 target_compile_features(${PKG}_core PUBLIC cxx_std_20)
-target_compile_options(${PKG}_core PUBLIC -Wall -Wextra -Wpedantic -Werror)
+target_compile_options(${PKG}_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
+# ---- ADDING DEPENDENCIES (see README.md for the full decision table)
+# 1) vcpkg (preferred):   ./run.sh add fmt
+#      find_package(fmt CONFIG REQUIRED)
+#      target_link_libraries(${PKG}_core PUBLIC fmt::fmt)
+# 2) FetchContent (not in vcpkg / want an exact git tag):
+#      include(FetchContent)
+#      FetchContent_Declare(foo GIT_REPOSITORY <url> GIT_TAG <tag>)
+#      FetchContent_MakeAvailable(foo)
+#      target_link_libraries(${PKG}_core PUBLIC foo::foo)
+# Link to the CORE library: app, tests and bench inherit it automatically.
 
 # ---- driver
 add_executable(app src/main.cpp)
@@ -48,22 +112,23 @@ gtest_discover_tests(tests)
 find_package(benchmark CONFIG REQUIRED)
 add_executable(bench bench/bench_main.cpp)
 target_link_libraries(bench PRIVATE ${PKG}_core benchmark::benchmark)
-EOF2
+EOF_CMAKE
 
+# ================================================================ vcpkg.json
 BASELINE=""
-if git -C "$HOME/vcpkg" rev-parse HEAD >/dev/null 2>&1; then
+if git -C "$VCPKG_ROOT" rev-parse HEAD >/dev/null 2>&1; then
   BASELINE=",
-  \"builtin-baseline\": \"$(git -C "$HOME/vcpkg" rev-parse HEAD)\""
+  \"builtin-baseline\": \"$(git -C "$VCPKG_ROOT" rev-parse HEAD)\""
 fi
-cat > vcpkg.json << EOF2
+cat > vcpkg.json << EOF_VCPKG
 {
   "name": "${PKG}",
   "version": "0.1.0",
   "dependencies": ["gtest", "benchmark"]${BASELINE}
 }
-EOF2
+EOF_VCPKG
 
-cat > CMakePresets.json << 'EOF2'
+cat > CMakePresets.json << 'EOF_PRESETS'
 {
   "version": 6,
   "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
@@ -73,10 +138,9 @@ cat > CMakePresets.json << 'EOF2'
       "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_CXX_COMPILER": "/usr/bin/g++-13",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+        "CMAKE_CXX_COMPILER": "/usr/bin/g++",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
@@ -121,55 +185,235 @@ cat > CMakePresets.json << 'EOF2'
         "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O3 -march=native -g -DNDEBUG"
       }
     }
+  ],
+  "buildPresets": [
+    { "name": "dev",     "configurePreset": "dev" },
+    { "name": "asan",    "configurePreset": "asan" },
+    { "name": "tsan",    "configurePreset": "tsan" },
+    { "name": "release", "configurePreset": "release" }
+  ],
+  "testPresets": [
+    { "name": "dev",  "configurePreset": "dev",  "output": { "outputOnFailure": true } },
+    { "name": "asan", "configurePreset": "asan", "output": { "outputOnFailure": true } },
+    { "name": "tsan", "configurePreset": "tsan", "output": { "outputOnFailure": true } }
+  ],
+  "workflowPresets": [
+    { "name": "dev", "steps": [
+      { "type": "configure", "name": "dev" },
+      { "type": "build",     "name": "dev" },
+      { "type": "test",      "name": "dev" } ] },
+    { "name": "asan", "steps": [
+      { "type": "configure", "name": "asan" },
+      { "type": "build",     "name": "asan" },
+      { "type": "test",      "name": "asan" } ] },
+    { "name": "tsan", "steps": [
+      { "type": "configure", "name": "tsan" },
+      { "type": "build",     "name": "tsan" },
+      { "type": "test",      "name": "tsan" } ] },
+    { "name": "release", "steps": [
+      { "type": "configure", "name": "release" },
+      { "type": "build",     "name": "release" } ] }
   ]
 }
-EOF2
+EOF_PRESETS
 
-cat > run.sh << 'EOF2'
+# ===================================================================== run.sh
+cat > run.sh << 'EOF_RUN'
 #!/usr/bin/env bash
-# run.sh [test|bench|all]   default: test
+# ./run.sh <command>      (default: dev)
+#
+#   dev | asan | tsan   configure + build + ctest with that preset
+#   test                alias for asan
+#   setup               configure dev only (creates compile_commands.json for clangd)
+#   build               configure dev and build the app
+#   run [args...]       build dev and run the app
+#   bench               release build, then run benchmarks
+#   all                 test + bench
+#   add <port>...       add a vcpkg dependency to vcpkg.json
+#   usage <port>        show the find_package/link lines vcpkg suggests (after configure)
+#   clean               delete build directories (keeps vcpkg_installed)
+#   help                show these commands
+#
+# These are thin wrappers: the same thing works in any IDE or CI via
+#   cmake --workflow --preset <name>
 set -euo pipefail
 cd "$(dirname "$0")"
-JOBS=$(nproc)
 
-case "${1:-test}" in
-  dev)
-    cmake --preset dev
-    cmake --build build-dev -j"$JOBS"
-    ctest --test-dir build-dev --output-on-failure
+export VCPKG_ROOT="${VCPKG_ROOT:-$HOME/vcpkg}"
+
+cmd="${1:-dev}"
+if [ $# -gt 0 ]; then shift; fi
+
+case "$cmd" in
+  dev|asan|tsan)
+    cmake --workflow --preset "$cmd"
     ;;
   test)
-    cmake --preset asan
-    cmake --build build-asan -j"$JOBS"
-    ctest --test-dir build-asan --output-on-failure
+    cmake --workflow --preset asan
     ;;
-  tsan)
-    cmake --preset tsan
-    cmake --build build-tsan -j"$JOBS"
-    ctest --test-dir build-tsan --output-on-failure
+  setup)
+    cmake --preset dev
+    ;;
+  build|run)
+    # Ninja reconfigures when CMakeLists or vcpkg manifests change. Preset
+    # files need an explicit configure; ordinary source edits only need a build.
+    if [[ ! -f build-dev/build.ninja ||
+          CMakePresets.json -nt build-dev/build.ninja ||
+          CMakeUserPresets.json -nt build-dev/build.ninja ]]; then
+      cmake --preset dev
+    fi
+    cmake --build --preset dev --target app
+    if [ "$cmd" = run ]; then ./build-dev/app "$@"; fi
     ;;
   bench)
-    cmake --preset release
-    cmake --build build-release -j"$JOBS"
-    # pin to an isolated core; never benchmark from inside the IDE
-    taskset -c 2 ./build-release/bench
+    cmake --workflow --preset release
+    ./build-release/bench "$@"
     ;;
   all)
-    "$0" test && "$0" bench
+    ./run.sh test && ./run.sh bench
+    ;;
+  add)
+    [ $# -ge 1 ] || { echo "usage: run.sh add <vcpkg-port>..."; exit 1; }
+    for port in "$@"; do "$VCPKG_ROOT/vcpkg" add port "$port"; done
+    echo
+    echo "Next: run ./run.sh setup, then ./run.sh usage <port> for the CMake lines."
+    ;;
+  usage)
+    [ $# -ge 1 ] || { echo "usage: run.sh usage <vcpkg-port>"; exit 1; }
+    shopt -s nullglob
+    files=(vcpkg_installed/*/share/"$1"/usage)
+    if [ ${#files[@]} -eq 0 ]; then
+      echo "No usage file for '$1' (run ./run.sh setup first, or look it up at vcpkg.io)."
+      exit 1
+    fi
+    cat "${files[0]}"
+    ;;
+  clean)
+    rm -rf build-dev build-asan build-tsan build-release
+    ;;
+  help|-h|--help)
+    sed -n '2,/^set -/{ /^set -/d; s/^# *//; p; }' ./run.sh
     ;;
   *)
-    echo "usage: run.sh [dev|test|tsan|bench|all]"; exit 1
+    echo "Unknown command: $cmd" >&2
+    ./run.sh help >&2
+    exit 1
     ;;
 esac
-EOF2
+EOF_RUN
 chmod +x run.sh
 
-cat > .clangd << 'EOF2'
+# =============================================================== VS Code / WSL
+mkdir -p .vscode
+cat > .vscode/settings.json << 'EOF_VSCODE_SETTINGS'
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": false,
+  "clangd.path": "/usr/bin/clangd",
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  }
+}
+EOF_VSCODE_SETTINGS
+
+cat > .vscode/tasks.json << 'EOF_VSCODE_TASKS'
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "C++: build",
+      "type": "process",
+      "command": "/bin/bash",
+      "args": [
+        "${workspaceFolder}/run.sh",
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "C++: test (dev)",
+      "type": "process",
+      "command": "/bin/bash",
+      "args": [
+        "${workspaceFolder}/run.sh",
+        "dev"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "test"
+    },
+    {
+      "label": "C++: test (ASan + UBSan)",
+      "type": "process",
+      "command": "/bin/bash",
+      "args": [
+        "${workspaceFolder}/run.sh",
+        "test"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "test"
+    }
+  ]
+}
+EOF_VSCODE_TASKS
+
+cat > .vscode/launch.json << 'EOF_VSCODE_LAUNCH'
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug app",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-dev/app",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "terminal": "integrated",
+      "preLaunchTask": "C++: build"
+    }
+  ]
+}
+EOF_VSCODE_LAUNCH
+
+cat > .vscode/extensions.json << 'EOF_VSCODE_EXTENSIONS'
+{
+  "recommendations": [
+    "llvm-vs-code-extensions.vscode-clangd",
+    "ms-vscode.cmake-tools",
+    "vadimcn.vscode-lldb"
+  ]
+}
+EOF_VSCODE_EXTENSIONS
+
+# =============================================================== tool configs
+cat > .clangd << 'EOF_CLANGD'
 CompileFlags:
   CompilationDatabase: build-dev
-EOF2
+EOF_CLANGD
 
-cat > .clang-tidy << 'EOF2'
+cat > .clang-tidy << 'EOF_TIDY'
 Checks: >
   -*,
   performance-*,
@@ -180,9 +424,10 @@ Checks: >
   readability-identifier-naming
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'
-EOF2
+EOF_TIDY
 
-cat > .gitignore << 'EOF2'
+# Share the portable VS Code shortcuts; keep personal IDE state local.
+cat > .gitignore << 'EOF_IGNORE'
 build-dev/
 build-release/
 build-asan/
@@ -191,30 +436,38 @@ cmake-build-*/
 vcpkg_installed/
 .cache/
 .idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vs/
+CMakeUserPresets.json
 compile_commands.json
 data/
 *.o
 *.out
-EOF2
+EOF_IGNORE
 
-cat > src/placeholder.cpp << EOF2
+# ============================================================== source stubs
+cat > src/placeholder.cpp << EOF_SRC
 // Replace me: first real translation unit of the core library.
-namespace ${PKG//-/_} {
+namespace ${PKG_NS} {
 int keep_the_library_non_empty() { return 0; }
-}  // namespace ${PKG//-/_}
-EOF2
+}  // namespace ${PKG_NS}
+EOF_SRC
 
-cat > src/main.cpp << 'EOF2'
+cat > src/main.cpp << 'EOF_MAIN'
 int main() { return 0; }
-EOF2
+EOF_MAIN
 
-cat > tests/test_main.cpp << 'EOF2'
+cat > tests/test_main.cpp << 'EOF_TEST'
 #include <gtest/gtest.h>
 
 TEST(Sanity, AlwaysPasses) { EXPECT_EQ(1 + 1, 2); }
-EOF2
+EOF_TEST
 
-cat > bench/bench_main.cpp << 'EOF2'
+cat > bench/bench_main.cpp << 'EOF_BENCH'
 #include <benchmark/benchmark.h>
 
 static void BM_Nothing(benchmark::State& state) {
@@ -225,20 +478,112 @@ static void BM_Nothing(benchmark::State& state) {
 BENCHMARK(BM_Nothing);
 
 BENCHMARK_MAIN();
-EOF2
+EOF_BENCH
 
-[ -f "$HOME/.clang-format" ] && cp "$HOME/.clang-format" .
+[ -f "$HOME/.clang-format" ] && cp "$HOME/.clang-format" . || true
+
+# ==================================================================== README
+cat > README.md << 'EOF_README'
+# @NAME@
+
+C++20 with g++, CMake, Ninja, and vcpkg, running inside WSL/Linux.
+The CMake files define the build for every IDE. `run.sh` provides terminal
+shortcuts; the `.vscode` files provide optional VS Code shortcuts.
+
+## Everyday use
+
+    ./run.sh run        # build and run the app
+    ./run.sh dev        # build and run the normal tests
+    ./run.sh test       # build and test with ASan + UBSan
+    ./run.sh help       # show all commands
+
+Ordinary build/run commands are incremental. The project generator performs
+the initial configure and prepares clangd's compilation database for you.
+
+## Choose your IDE
+
+Keep the project and compiler in WSL when switching IDEs.
+
+- **VS Code:** run `code .` from this project's WSL terminal. Use Ctrl+Shift+B
+  to build, Ctrl+F5 to run, and F5 to debug. The WSL-side extensions are clangd,
+  CMake Tools, and CodeLLDB. clangd handles editing; g++ compiles the program.
+- **CLion:** open the same WSL project folder. Use the Ubuntu-24.04 WSL
+  toolchain. Under Settings > Build, Execution, Deployment > CMake, enable
+  and select the imported `dev` profile, then build/run the `app` target.
+  CLion supplies its own editor and debugger integration.
+- **Other CMake-capable IDEs:** select the WSL/Linux toolchain and the `dev`
+  configure/build preset. Editors using clangd can read `.clangd`, which
+  points to `build-dev/compile_commands.json`.
+
+The four portable VS Code configuration files are included in Git so they
+remain available after cloning. Personal IDE state, `.idea`, build outputs,
+and `CMakeUserPresets.json` remain ignored.
+
+## Build without an IDE or helper script
+
+    cmake --preset dev
+    cmake --build --preset dev
+    ctest --preset dev
+    ./build-dev/app
+
+Run the configure command once after cloning. CMake/Ninja handles changes to
+CMakeLists and the dependency manifest during subsequent builds. After editing
+presets directly, configure again. `./run.sh build` handles this check for you.
+
+Available presets: `dev` for normal debugging, `asan` for ASan + UBSan, `tsan`
+for ThreadSanitizer, and `release` for optimized builds and benchmarks.
+For example, `cmake --workflow --preset asan` configures, builds, and tests.
+
+## Requirements and dependencies
+
+Install CMake >= 3.25, Ninja, g++, Git, and vcpkg once in your WSL distribution.
+vcpkg defaults to `~/vcpkg`; export `VCPKG_ROOT` only for a different location.
+The manifest already includes GoogleTest and Google Benchmark.
+
+To add a library:
+
+    ./run.sh add fmt
+    ./run.sh setup
+    ./run.sh usage fmt
+
+Then add the suggested `find_package(...)` and `target_link_libraries(...)`
+lines to CMakeLists.txt. Link libraries to `@PKG@_core` so the app, tests, and
+benchmarks inherit them. Use `PUBLIC` when your public headers expose the
+dependency's types; otherwise use `PRIVATE`.
+
+Put reusable code in `src/` and public headers in `include/`. Add each new
+implementation file to the `add_library(@PKG@_core ...)` source list.
+`src/main.cpp` remains the app entry point.
+
+## Occasional maintenance
+
+    ./run.sh bench      # optimized build and benchmark run
+    ./run.sh setup      # explicitly refresh the dev configuration
+    ./run.sh clean      # remove build outputs; keep installed dependencies
+
+The presets select `/usr/bin/g++`. After moving the project or deliberately
+changing its compiler, run `cmake --preset dev --fresh`; repeat for any other
+preset you use. These defaults target WSL/Linux. Native Windows or macOS
+builds need appropriate compiler paths and options.
+EOF_README
+sed -i "s/@NAME@/$NAME/g; s/@PKG@/$PKG/g" README.md
 
 git init -q
 git add -A
-git commit -q -m "scaffold: initial project structure"
+git commit -q -m "scaffold: initial project structure" \
+  || echo "Note: git commit skipped (set user.name / user.email, then commit)."
 
 echo "Created $DIR"
+echo "Preparing the dev build and clangd compilation database..."
+if ! ./run.sh setup; then
+  echo "Project created, but initial configure failed. Fix the error above, then:"
+  echo "  cd $DIR && ./run.sh setup"
+  exit 1
+fi
 echo
-echo "Next:"
-echo "  cd $DIR"
-echo "  ./run.sh dev       # fast debug build + ctest"
-echo "  ./run.sh test      # asan build + ctest"
-echo "  ./run.sh bench     # release build, pinned"
-echo
-echo "Phase 0 gate: verify the sanitizers actually fire before writing real code."
+echo "Ready:"
+echo "  cd $DIR && code ."
+echo "  Ctrl+Shift+B: build | F5: debug | Ctrl+F5: run"
+echo "  ./run.sh dev       # build + tests"
+echo "  ./run.sh test      # asan/ubsan"
+echo "  ./run.sh add fmt   # add a dependency (see README.md)"

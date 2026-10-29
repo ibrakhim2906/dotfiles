@@ -11,6 +11,10 @@ alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 export BAT_THEME=ansi
+
+# Prefer Cargo-installed CLI tools over distro packages.
+export PATH="$HOME/.cargo/bin:$PATH"
+
 alias cat='batcat --paging=never'
 alias ls='eza --icons'
 alias ll='eza -la --icons --git'
@@ -32,6 +36,9 @@ eval "$(zoxide init bash --cmd cd)"
 
 export PATH="$PATH:/opt/nvim/bin:$HOME/vcpkg:$HOME/scripts"
 alias dotfiles='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+
+export VCPKG_ROOT=$HOME/vcpkg
+export PATH=$VCPKG_ROOT:$PATH
 
 # THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
