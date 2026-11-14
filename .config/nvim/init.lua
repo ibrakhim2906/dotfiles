@@ -2,10 +2,8 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
 -- Look: Tokyo Night (night) + JetBrains Mono, shared with Windows Terminal, tmux, the prompt and
--- Codex. The font only applies in Neovide (a terminal uses its own). To go back to the old
--- Dark+ on navy: theme = "bytes", font = "IoskeleyMonoTerm Nerd Font Mono:h16".
-local look = { theme = "tokyo", font = "JetBrainsMono NFM:h14" }
-vim.g.theme = look.theme  -- set before plugins load: lualine reads it
+-- Codex. The font only applies in Neovide (a terminal uses its own).
+local font = "JetBrainsMono NFM:h14"
 
 local o = vim.opt
 o.number = true
@@ -57,15 +55,11 @@ vim.diagnostic.config({ virtual_text = true, virtual_lines = false })
 vim.opt.showmode = false  -- lualine already shows the mode
 vim.o.winborder = "rounded"  -- hover, signature help and other floats match the terminal float
 
-if look.theme == "tokyo" then
-  vim.cmd.colorscheme("tokyonight-night")
-else
-  require("highlights")
-end
+vim.cmd.colorscheme("tokyonight-night")
 
 -- Neovide only: same font and colors as Windows Terminal. No effect in a terminal.
 if vim.g.neovide then
-  vim.o.guifont = look.font
+  vim.o.guifont = font
   -- Window title (no title bar; this is the taskbar and Alt+Tab label): "file - project",
   -- or just the project in a folder view (Oil's raw oil:// path is noise).
   vim.o.title = true

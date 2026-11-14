@@ -64,7 +64,7 @@ return {
   { "nvim-lualine/lualine.nvim",
     config = function()
       require("lualine").setup({
-        options = { theme = vim.g.theme == "tokyo" and "tokyonight" or require("bytes_dark").lualine, section_separators = "", component_separators = "", globalstatus = true },
+        options = { theme = "tokyonight", section_separators = "", component_separators = "", globalstatus = true },
         sections = {
           lualine_a = { "mode" },
           lualine_b = { "branch", "diff", "diagnostics" },
