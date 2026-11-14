@@ -4,7 +4,7 @@ return {
     lazy = false,
     build = ":TSUpdate",
     config = function()
-      local langs = { "cpp", "c", "python", "lua", "cmake", "bash", "json" }
+      local langs = { "cpp", "c", "python", "lua", "cmake", "bash", "json", "yaml", "toml", "markdown", "markdown_inline" }
       require("nvim-treesitter").setup()
       require("nvim-treesitter").install(langs)
       -- highlight = { enable = true } is gone; Neovim starts it per buffer now
@@ -16,8 +16,10 @@ return {
   },
   { "williamboman/mason.nvim", config = true },
   { "williamboman/mason-lspconfig.nvim",
-    dependencies = { "mason.nvim", "neovim/nvim-lspconfig" },
+    dependencies = { "mason.nvim", "neovim/nvim-lspconfig", "hrsh7th/cmp-nvim-lsp" },
     config = function()
+      -- Tell servers what nvim-cmp can show (snippets, argument placeholders, ...).
+      vim.lsp.config("*", { capabilities = require("cmp_nvim_lsp").default_capabilities() })
       require("mason-lspconfig").setup({
         ensure_installed = { "clangd", "basedpyright" },
       })

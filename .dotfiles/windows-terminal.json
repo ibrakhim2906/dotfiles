@@ -1,0 +1,105 @@
+{
+    "$help": "https://aka.ms/terminal-documentation",
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "actions": [],
+    "alwaysShowTabs": false,
+    "defaultProfile": "{998a7c08-435b-5e1d-966c-7ee8203af487}",
+    "disableAnimations": true,
+    "firstWindowPreference": "defaultProfile",
+    "keybindings": [],
+    "launchMode": "maximized",
+    "minimizeToNotificationArea": true,
+    "newTabMenu": [
+        {
+            "type": "remainingProfiles"
+        }
+    ],
+    "profiles": {
+        "defaults": {
+            "colorScheme": "Bytes Beneath Dark+",
+            "cursorShape": "bar",
+            "font": {
+                "face": "IoskeleyMonoTerm Nerd Font Mono",
+                "size": 16
+            },
+            "scrollbarState": "hidden"
+        },
+        "list": [
+            {
+                "commandline": "wsl.exe -d Ubuntu-24.04",
+                "guid": "{998a7c08-435b-5e1d-966c-7ee8203af487}",
+                "name": "Ubuntu-24.04",
+                "startingDirectory": "//wsl$/Ubuntu-24.04/home/ibrak"
+            },
+            {
+                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+                "hidden": false,
+                "name": "Windows PowerShell"
+            },
+            {
+                "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
+                "hidden": false,
+                "name": "Command Prompt"
+            },
+            {
+                "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
+                "hidden": false,
+                "name": "Azure Cloud Shell",
+                "source": "Windows.Terminal.Azure"
+            },
+            {
+                "guid": "{77dd644e-d511-51e4-8d85-7ef4245fcd53}",
+                "hidden": true,
+                "name": "Ubuntu-24.04",
+                "source": "Microsoft.WSL"
+            }
+        ]
+    },
+    "schemes": [
+        {
+            "name": "Bytes Beneath Dark+",
+            "background": "#00001C",
+            "foreground": "#D4D4D4",
+            "cursorColor": "#D4D4D4",
+            "selectionBackground": "#264F78",
+            "black": "#0F0F2A",
+            "red": "#F44747",
+            "green": "#6A9955",
+            "yellow": "#DCDCAA",
+            "blue": "#569CD6",
+            "purple": "#C586C0",
+            "cyan": "#4EC9B0",
+            "white": "#D4D4D4",
+            "brightBlack": "#6D6D7D",
+            "brightRed": "#F14C4C",
+            "brightGreen": "#B5CEA8",
+            "brightYellow": "#D7BA7D",
+            "brightBlue": "#9CDCFE",
+            "brightPurple": "#D7A8D1",
+            "brightCyan": "#4FC1FF",
+            "brightWhite": "#FFFFFF"
+        }
+    ],
+    "showTabsInTitlebar": false,
+    "showTerminalTitleInTitlebar": false,
+    "theme": "Bytes Beneath",
+    "themes": [
+        {
+            "name": "Bytes Beneath",
+            "tab": {
+                "background": "#00001CFF",
+                "unfocusedBackground": "#0F0F2AFF"
+            },
+            "tabRow": {
+                "background": "#0F0F2AFF",
+                "unfocusedBackground": "#0F0F2AFF"
+            },
+            "window": {
+                "applicationTheme": "dark",
+                "frame": "#303049",
+                "unfocusedFrame": "#0F0F2A",
+                "useMica": false
+            }
+        }
+    ]
+}

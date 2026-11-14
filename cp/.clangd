@@ -1,0 +1,3 @@
+# Same flags as ~/scripts/cpr, so clangd agrees with the real build.
+CompileFlags:
+  Add: [-xc++, -std=c++23, -I/home/ibrak/cp/pch, -DLOCAL, -Wall, -Wextra, -Wshadow]

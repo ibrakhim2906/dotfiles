@@ -12,8 +12,8 @@ alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 export BAT_THEME=ansi
 
-# Prefer Cargo-installed CLI tools over distro packages.
-export PATH="$HOME/.cargo/bin:$PATH"
+# Tool paths (cargo, nvim, vcpkg, scripts) live in one file shared with ~/.profile.
+. "$HOME/.config/shell/paths.sh"
 
 alias cat='batcat --paging=never'
 alias ls='eza --icons'
@@ -34,11 +34,17 @@ eval "$(starship init bash)"
 eval "$(fzf --bash)"
 eval "$(zoxide init bash --cmd cd)"
 
-export PATH="$PATH:/opt/nvim/bin:$HOME/vcpkg:$HOME/scripts"
 alias dotfiles='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 
-export VCPKG_ROOT=$HOME/vcpkg
-export PATH=$VCPKG_ROOT:$PATH
+# nv [dir]: open a folder (default: current) in Neovide, detached from this terminal.
+nv() { (cd "${1:-.}" && setsid -f neovide.exe . </dev/null >/dev/null 2>&1); }
+
+# BEGIN C++23 interactive defaults
+# Explicit -std=... arguments supplied afterward override this default.
+alias g++='g++ -std=c++23'
+alias c++='c++ -std=c++23'
+alias clang++='clang++ -std=c++23'
+# END C++23 interactive defaults
 
 # THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"

@@ -7,5 +7,5 @@ flags=(-g -fsanitize=address,undefined -DLOCAL)
 [ "${2:-}" = "--fast" ] && flags=(-O2)
 build_dir="$(mktemp -d)"
 trap 'rm -rf -- "$build_dir"' EXIT
-g++ -std=c++20 -Wall -Wextra -Wshadow "${flags[@]}" -I "$HOME/cp/pch" -o "$build_dir/program" "$n.cpp"
+g++ -std=c++23 -Wall -Wextra -Wshadow "${flags[@]}" -I "$HOME/cp/pch" -o "$build_dir/program" "$n.cpp"
 if [ -f "$n.in" ]; then "$build_dir/program" < "$n.in"; else "$build_dir/program"; fi
