@@ -44,23 +44,53 @@ return {
       })
     end,
   },
-  { "nvim-telescope/telescope.nvim", dependencies = { "nvim-lua/plenary.nvim" } },
+  { "echasnovski/mini.icons",
+    lazy = true,
+    opts = {},
+    init = function()
+      -- Oil uses mini.icons directly; this lets Telescope and others find it too.
+      package.preload["nvim-web-devicons"] = function()
+        require("mini.icons").mock_nvim_web_devicons()
+        return package.loaded["nvim-web-devicons"]
+      end
+    end,
+  },
+  { "nvim-telescope/telescope.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    opts = { defaults = { borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" } } },
+  },
   { "lewis6991/gitsigns.nvim", config = true },
   { "stevearc/oil.nvim", config = true },
   { "nvim-lualine/lualine.nvim",
     config = function()
       require("lualine").setup({
-        options = { theme = require("bytes_dark").lualine, section_separators = "", component_separators = "", globalstatus = true },
+        options = { theme = vim.g.theme == "tokyo" and "tokyonight" or require("bytes_dark").lualine, section_separators = "", component_separators = "", globalstatus = true },
         sections = {
           lualine_a = { "mode" },
           lualine_b = { "branch", "diff", "diagnostics" },
-          lualine_c = { "filename" },
+          lualine_c = {
+            -- project folder (the window has no title bar), then the file
+            { function()
+                local cwd = vim.fn.getcwd()
+                return vim.fn.nr2char(0xF07B) .. " " .. (cwd == vim.env.HOME and "~" or vim.fn.fnamemodify(cwd, ":t"))
+              end,
+              color = "Directory", padding = { left = 1, right = 2 } },
+            { "filename", padding = { left = 0, right = 1 } },
+          },
           lualine_x = { "filetype" },
           lualine_y = { "progress" },
           lualine_z = { "location" },
         },
       })
     end,
+  },
+  { "folke/tokyonight.nvim",
+    lazy = true,  -- loads on `colorscheme`
+    opts = {
+      on_colors = function(c)
+        c.comment = "#737DA8"  -- stock #565F89 is only ~2.7:1 on the background; this is ~4.3:1
+      end,
+    },
   },
   { "christoomey/vim-tmux-navigator" },
 }

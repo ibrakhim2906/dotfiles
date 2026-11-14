@@ -1,17 +1,17 @@
 add_newline = false
-format = """[ibrakhim@pc:](#4FC1FF)$directory$git_branch${custom.git_dirty}
+format = """[ibrakhim@pc:](#7DCFFF)$directory$git_branch${custom.git_dirty}
 $character"""
 
 [directory]
 format = '[$path]($style)'
-style = '#569CD6'
+style = '#7AA2F7'
 truncation_length = 0
 truncate_to_repo = false
 home_symbol = '~'
 
 [git_branch]
 format = ' [$branch]($style)'
-style = '#C586C0'
+style = '#BB9AF7'
 symbol = ''
 
 [custom.git_dirty]
@@ -21,10 +21,10 @@ when = 'test -n "$(git status --porcelain --untracked-files=normal 2>/dev/null)"
 command = "printf '*'"
 shell = ['sh']
 format = ' [$output]($style)'
-style = '#D7BA7D'
+style = '#E0AF68'
 
 [character]
 format = '$symbol '
-success_symbol = '[\$](#4EC9B0)'
-error_symbol = '[\$](#F44747)'
-vimcmd_symbol = '[\$](#4EC9B0)'
+success_symbol = '[\$](#9ECE6A)'
+error_symbol = '[\$](#F7768E)'
+vimcmd_symbol = '[\$](#9ECE6A)'

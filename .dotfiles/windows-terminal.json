@@ -16,11 +16,11 @@
     ],
     "profiles": {
         "defaults": {
-            "colorScheme": "Bytes Beneath Dark+",
+            "colorScheme": "Tokyo Night",
             "cursorShape": "bar",
             "font": {
-                "face": "IoskeleyMonoTerm Nerd Font Mono",
-                "size": 16
+                "face": "JetBrainsMono NFM",
+                "size": 14
             },
             "scrollbarState": "hidden"
         },
@@ -57,6 +57,29 @@
     },
     "schemes": [
         {
+            "name": "Tokyo Night",
+            "background": "#1A1B26",
+            "foreground": "#C0CAF5",
+            "cursorColor": "#C0CAF5",
+            "selectionBackground": "#283457",
+            "black": "#15161E",
+            "red": "#F7768E",
+            "green": "#9ECE6A",
+            "yellow": "#E0AF68",
+            "blue": "#7AA2F7",
+            "purple": "#BB9AF7",
+            "cyan": "#7DCFFF",
+            "white": "#A9B1D6",
+            "brightBlack": "#737DA8",
+            "brightRed": "#F7768E",
+            "brightGreen": "#9ECE6A",
+            "brightYellow": "#E0AF68",
+            "brightBlue": "#7AA2F7",
+            "brightPurple": "#BB9AF7",
+            "brightCyan": "#7DCFFF",
+            "brightWhite": "#C0CAF5"
+        },
+        {
             "name": "Bytes Beneath Dark+",
             "background": "#00001C",
             "foreground": "#D4D4D4",
@@ -82,8 +105,25 @@
     ],
     "showTabsInTitlebar": false,
     "showTerminalTitleInTitlebar": false,
-    "theme": "Bytes Beneath",
+    "theme": "Tokyo Night",
     "themes": [
+        {
+            "name": "Tokyo Night",
+            "tab": {
+                "background": "#1A1B26FF",
+                "unfocusedBackground": "#16161EFF"
+            },
+            "tabRow": {
+                "background": "#16161EFF",
+                "unfocusedBackground": "#16161EFF"
+            },
+            "window": {
+                "applicationTheme": "dark",
+                "frame": "#292E42",
+                "unfocusedFrame": "#16161E",
+                "useMica": false
+            }
+        },
         {
             "name": "Bytes Beneath",
             "tab": {

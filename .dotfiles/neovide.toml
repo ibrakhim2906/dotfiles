@@ -1,3 +1,4 @@
 # Run Neovim inside WSL (Ubuntu-24.04), same as the Windows Terminal profile.
 wsl = true
 maximized = true
+frame = "none"

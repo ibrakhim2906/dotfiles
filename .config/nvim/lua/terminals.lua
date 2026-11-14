@@ -1,6 +1,7 @@
 -- A floating shell for quick commands, plus a jump to Windows Terminal for
 -- longer sessions (gdb, servers). The float keeps its shell alive when hidden.
 local M = {}
+M.blend = 15  -- how see-through the float is, 0 (solid) to 100; only this window is affected
 local buf, win
 
 local function is_open()
@@ -18,6 +19,7 @@ local function open()
     col = math.floor((vim.o.columns - width) / 2),
     title = " terminal ", title_pos = "center",
   })
+  vim.wo[win].winblend = M.blend
   if vim.bo[buf].buftype ~= "terminal" then
     vim.fn.jobstart(vim.o.shell, {
       term = true,

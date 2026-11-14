@@ -13,7 +13,7 @@ local function apply()
   -- Editor and floating windows.
   set({ "Normal", "NormalNC" }, { fg = c.fg, bg = c.bg })
   set("NormalFloat", { fg = c.fg, bg = c.surface })
-  set("FloatBorder", { fg = c.border, bg = c.surface })
+  set("FloatBorder", { fg = c.float_border, bg = c.surface })
   set({ "FloatTitle", "FloatFooter" }, { fg = c.variable, bg = c.surface, bold = true })
   set({ "Cursor", "lCursor", "TermCursor" }, { fg = c.bg, bg = c.fg })
   set("CursorIM", { fg = c.bg, bg = c.teal })

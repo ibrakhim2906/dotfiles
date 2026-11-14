@@ -1,8 +1,8 @@
 -- Bytes Beneath's midnight background with VS Code Dark+ token colors.
 local c = {
-  bg = "#00001C", surface = "#0F0F2A", cursorline = "#0A0A26",
-  detail = "#191933", border = "#303049", selection = "#264F78",
-  fg = "#D4D4D4", muted = "#85859C", gutter = "#62627A",
+  bg = "#00001C", surface = "#0F0F2A", cursorline = "#14143A",
+  detail = "#191933", border = "#303049", float_border = "#46466A", selection = "#264F78",
+  fg = "#D4D4D4", muted = "#85859C", gutter = "#7A7A94",
   blue = "#569CD6", purple = "#C586C0", teal = "#4EC9B0",
   variable = "#9CDCFE", constant = "#4FC1FF", func = "#DCDCAA",
   string = "#CE9178", number = "#B5CEA8", comment = "#6A9955",

@@ -1,6 +1,12 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
+-- Look: Tokyo Night (night) + JetBrains Mono, shared with Windows Terminal, tmux, the prompt and
+-- Codex. The font only applies in Neovide (a terminal uses its own). To go back to the old
+-- Dark+ on navy: theme = "bytes", font = "IoskeleyMonoTerm Nerd Font Mono:h16".
+local look = { theme = "tokyo", font = "JetBrainsMono NFM:h14" }
+vim.g.theme = look.theme  -- set before plugins load: lualine reads it
+
 local o = vim.opt
 o.number = true
 o.relativenumber = true
@@ -49,14 +55,21 @@ vim.opt.pumheight = 10
 vim.opt.cursorline = true
 vim.diagnostic.config({ virtual_text = true, virtual_lines = false })
 vim.opt.showmode = false  -- lualine already shows the mode
-require("highlights")
+vim.o.winborder = "rounded"  -- hover, signature help and other floats match the terminal float
+
+if look.theme == "tokyo" then
+  vim.cmd.colorscheme("tokyonight-night")
+else
+  require("highlights")
+end
 
 -- Neovide only: same font and colors as Windows Terminal. No effect in a terminal.
 if vim.g.neovide then
-  local c = require("bytes_dark").colors
-  vim.o.guifont = "IoskeleyMonoTerm Nerd Font Mono:h16"
-  vim.g.neovide_title_background_color = c.bg
-  vim.g.neovide_title_text_color = c.fg
+  vim.o.guifont = look.font
+  -- Window title (no title bar; this is the taskbar and Alt+Tab label): "file - project",
+  -- or just the project in a folder view (Oil's raw oil:// path is noise).
+  vim.o.title = true
+  vim.o.titlestring = [[%{expand('%:t') != '' ? expand('%:t') . '  -  ' : ''}%{fnamemodify(getcwd(), ':t')}]]
   -- Launched from Windows, Neovide starts in a /mnt/c folder; work from the WSL home instead.
   if vim.fn.argc() == 0 and vim.fn.getcwd():find("^/mnt/") then vim.fn.chdir("~") end
   -- Neovide has no paste shortcut of its own; mirror Windows Terminal's Ctrl+Shift+V.
@@ -80,7 +93,7 @@ if vim.g.neovide then
   vim.g.neovide_cursor_vfx_mode = ""  -- try "railgun", "pixiedust" or "sonicboom"
   vim.g.neovide_scroll_animation_length = 0.25
   vim.g.neovide_hide_mouse_when_typing = true
-  vim.g.neovide_padding_top = 6
+  vim.g.neovide_padding_top = 32  -- no title bar, so this is the space above the first line
   vim.g.neovide_padding_left = 8
   vim.g.neovide_padding_right = 8
 
